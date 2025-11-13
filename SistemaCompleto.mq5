@@ -111,13 +111,15 @@ input string   Symbol_SundayClose   = "00:00";
 input group "=== FILTRO ENTROPICO ==="
 input bool     EnableEntropyFilter = true;           // Attiva Filtro Entropico
 input int      Entropy_Period_Breve = 14;            // Periodo Entropia Breve
-input int      Entropy_Period_Medio = 42;            // Periodo Entropia Medio  
+input int      Entropy_Period_Medio = 42;            // Periodo Entropia Medio
 input int      Entropy_Period_Lungo = 100;           // Periodo Entropia Lungo
 input int      Entropy_Bins = 10;                    // Numero Bins Discretizzazione
 input double   Entropy_Sideways_Threshold = 0.85;    // Soglia Mercato Laterale
 input double   Entropy_Chaotic_Threshold = 0.95;     // Soglia Mercato Caotico
 input double   Entropy_Volatility_Min = 0.5;         // Soglia Volatilità Minima
 input double   Entropy_Volatility_Max = 3.0;         // Soglia Volatilità Massima
+input int      Entropy_Confirmation_Bars = 2;        // Barre Consecutive per Conferma
+input double   Entropy_Hysteresis = 0.05;            // Fattore Isteresi (0.05 = 5%)
 
 //+------------------------------------------------------------------+
 //| Parametri Adaptive Take Profit                                   |
@@ -239,7 +241,8 @@ int OnInit()
     tradingWrapper.ConfigureEntropyFilter(
         Entropy_Period_Breve, Entropy_Period_Medio, Entropy_Period_Lungo,
         Entropy_Bins, Entropy_Sideways_Threshold, Entropy_Chaotic_Threshold,
-        Entropy_Volatility_Min, Entropy_Volatility_Max
+        Entropy_Volatility_Min, Entropy_Volatility_Max,
+        Entropy_Confirmation_Bars, Entropy_Hysteresis
     );
     
     // Configura l'Adaptive Take Profit se attivato

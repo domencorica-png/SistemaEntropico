@@ -166,26 +166,32 @@ public:
         if(m_enableEntropyFilter && ShouldBlockTrade())
         {
             Print("ENTROPY FILTER: TRADE BLOCCATO - Mercato Laterale/Caotico");
-            Print("  Entropia Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4));
+            Print("  Entropia Ponderata: ", DoubleToString(m_entropyFilter.GetWeightedEntropy(), 4));
+            Print("  (Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4),
+                  " Medio: ", DoubleToString(m_entropyFilter.GetEntropyMedio(), 4),
+                  " Lungo: ", DoubleToString(m_entropyFilter.GetEntropyLungo(), 4), ")");
             Print("  Volatilità: ", DoubleToString(m_entropyFilter.GetVolatility(), 4), "%");
             Print("  Stato: ", m_entropyFilter.IsSideways() ? "LATERALE" : "CAOTICO");
             return false;
         }
-        
+
         return m_trade.Buy(lots, symbol, price, sl, tp, comment);
     }
-    
+
     bool Sell(double lots, string symbol, double price, double sl, double tp, string comment)
     {
         if(m_enableEntropyFilter && ShouldBlockTrade())
         {
             Print("ENTROPY FILTER: TRADE BLOCCATO - Mercato Laterale/Caotico");
-            Print("  Entropia Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4));
+            Print("  Entropia Ponderata: ", DoubleToString(m_entropyFilter.GetWeightedEntropy(), 4));
+            Print("  (Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4),
+                  " Medio: ", DoubleToString(m_entropyFilter.GetEntropyMedio(), 4),
+                  " Lungo: ", DoubleToString(m_entropyFilter.GetEntropyLungo(), 4), ")");
             Print("  Volatilità: ", DoubleToString(m_entropyFilter.GetVolatility(), 4), "%");
             Print("  Stato: ", m_entropyFilter.IsSideways() ? "LATERALE" : "CAOTICO");
             return false;
         }
-        
+
         return m_trade.Sell(lots, symbol, price, sl, tp, comment);
     }
     
