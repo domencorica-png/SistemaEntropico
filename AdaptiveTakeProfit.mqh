@@ -1,4 +1,4 @@
-﻿//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
 //|                      AdaptiveTakeProfit.mqh                      |
 //|                        Copyright 2025, Your Name                 |
 //|                        Modulo Take Profit Adattativo Percentuale |
