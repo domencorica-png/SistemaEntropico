@@ -117,15 +117,34 @@ public:
     void Update()
     {
         if(!UpdateReturns()) return;
-        
+
         // Calcola l'entropia per ogni timeframe - CORREZIONE FONDAMENTALE: usa MathLog2
         m_entropy_breve = CalculateEntropy(m_returns_breve, m_period_breve);
         m_entropy_medio = CalculateEntropy(m_returns_medio, m_period_medio);
         m_entropy_lungo = CalculateEntropy(m_returns_lungo, m_period_lungo);
-        
+
         // Calcola volatilità corrente (ATR normalizzato)
         m_volatility_current = CalculateNormalizedVolatility();
-        
+
+        // DEBUG LOGGING: Stampa valori ad ogni update per identificare problemi
+        static int log_counter = 0;
+        log_counter++;
+        if(log_counter % 20 == 0)  // Logga ogni 20 barre per non sovraccaricare
+        {
+            Print("=== ENTROPY FILTER DEBUG ===");
+            Print("Entropia Breve: ", DoubleToString(m_entropy_breve, 4),
+                  " (Soglia Sideways: ", DoubleToString(m_sideways_threshold, 2),
+                  ", Soglia Chaotic: ", DoubleToString(m_chaotic_threshold, 2), ")");
+            Print("Entropia Medio: ", DoubleToString(m_entropy_medio, 4));
+            Print("Entropia Lungo: ", DoubleToString(m_entropy_lungo, 4));
+            Print("Volatilità %: ", DoubleToString(m_volatility_current, 4));
+            Print("Consecutive Sideways: ", m_consecutive_sideways,
+                  " / ", m_confirmation_bars);
+            Print("Consecutive Chaotic: ", m_consecutive_chaotic,
+                  " / ", m_confirmation_bars);
+            Print("============================");
+        }
+
         // Determina lo stato del mercato con conferma
         UpdateMarketState();
     }
@@ -264,66 +283,74 @@ private:
         return (atr[0] / current_price) * 100.0;
     }
     
-    // Determina lo stato del mercato con meccanismo di conferma
+    // Determina lo stato del mercato con meccanismo di conferma - LOGICA CORRETTA
     void UpdateMarketState()
     {
-        bool was_sideways = m_is_sideways;
-        bool was_chaotic = m_is_chaotic;
-        
-        // Determina lo stato corrente
-        bool current_sideways = (m_entropy_breve > m_sideways_threshold && 
-                               m_entropy_medio > (m_sideways_threshold * 0.8) &&
-                               m_volatility_current < m_volatility_threshold_max);
-        
-        bool current_chaotic = (m_entropy_breve > m_chaotic_threshold &&
-                              m_volatility_current > m_volatility_threshold_max);
-        
-        // Applica il meccanismo di conferma
-        if(current_sideways != m_is_sideways)
+        // Determina lo stato corrente SEMPLIFICATO
+        // Alta entropia = mercato laterale/caotico (movimento random)
+        bool current_sideways = (m_entropy_breve > m_sideways_threshold);
+        bool current_chaotic = (m_entropy_breve > m_chaotic_threshold);
+
+        // FIX CRITICO: Conta le barre CONSECUTIVE in cui lo stato È attivo
+        // Non i cambi di stato!
+
+        // Gestione SIDEWAYS
+        if(current_sideways)
         {
-            if(current_sideways)
-                m_consecutive_sideways++;
-            else
-                m_consecutive_sideways = 0;
+            m_consecutive_sideways++;
         }
-        
-        if(current_chaotic != m_is_chaotic)
+        else
         {
-            if(current_chaotic)
-                m_consecutive_chaotic++;
-            else
-                m_consecutive_chaotic = 0;
-        }
-        
-        // Applica le soglie di conferma con hysteresis
-        if(!m_is_sideways && current_sideways && m_consecutive_sideways >= m_confirmation_bars)
-        {
-            m_is_sideways = true;
             m_consecutive_sideways = 0;
         }
-        else if(m_is_sideways && !current_sideways && m_consecutive_sideways >= m_confirmation_bars)
+
+        // Gestione CHAOTIC
+        if(current_chaotic)
         {
-            // Applica hysteresis per evitare oscillazioni
-            if(m_entropy_breve < (m_sideways_threshold * (1.0 - m_hysteresis_factor)))
-            {
-                m_is_sideways = false;
-                m_consecutive_sideways = 0;
-            }
+            m_consecutive_chaotic++;
         }
-        
-        if(!m_is_chaotic && current_chaotic && m_consecutive_chaotic >= m_confirmation_bars)
+        else
         {
-            m_is_chaotic = true;
             m_consecutive_chaotic = 0;
         }
-        else if(m_is_chaotic && !current_chaotic && m_consecutive_chaotic >= m_confirmation_bars)
+
+        // Attiva lo stato solo dopo N barre consecutive di conferma
+        if(m_consecutive_sideways >= m_confirmation_bars)
         {
-            // Applica hysteresis per evitare oscillazioni
-            if(m_entropy_breve < (m_chaotic_threshold * (1.0 - m_hysteresis_factor)) ||
-               m_volatility_current < (m_volatility_threshold_max * (1.0 - m_hysteresis_factor)))
+            if(!m_is_sideways)
+            {
+                m_is_sideways = true;
+                Print("ENTROPY FILTER: Mercato LATERALE attivato (Entropia=",
+                      DoubleToString(m_entropy_breve, 4), ", Soglia=",
+                      DoubleToString(m_sideways_threshold, 4), ")");
+            }
+        }
+        else
+        {
+            if(m_is_sideways && m_entropy_breve < (m_sideways_threshold * (1.0 - m_hysteresis_factor)))
+            {
+                m_is_sideways = false;
+                Print("ENTROPY FILTER: Mercato LATERALE disattivato");
+            }
+        }
+
+        // Attiva lo stato CHAOTIC solo dopo N barre consecutive di conferma
+        if(m_consecutive_chaotic >= m_confirmation_bars)
+        {
+            if(!m_is_chaotic)
+            {
+                m_is_chaotic = true;
+                Print("ENTROPY FILTER: Mercato CAOTICO attivato (Entropia=",
+                      DoubleToString(m_entropy_breve, 4), ", Soglia=",
+                      DoubleToString(m_chaotic_threshold, 4), ")");
+            }
+        }
+        else
+        {
+            if(m_is_chaotic && m_entropy_breve < (m_chaotic_threshold * (1.0 - m_hysteresis_factor)))
             {
                 m_is_chaotic = false;
-                m_consecutive_chaotic = 0;
+                Print("ENTROPY FILTER: Mercato CAOTICO disattivato");
             }
         }
     }

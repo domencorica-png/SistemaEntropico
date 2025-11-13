@@ -291,10 +291,11 @@ private:
     bool ShouldBlockTrade()
     {
         if(!m_enableEntropyFilter) return false;
-        
-        // Forza l'aggiornamento prima di ogni decisione di trading
-        m_entropyFilter.Update();
-        
+
+        // FIX CRITICO: NON chiamare Update() qui!
+        // L'update viene fatto solo su nuova barra in UpdateEntropyFilter()
+        // Chiamare Update() qui bypassa il meccanismo di conferma
+
         return m_entropyFilter.IsMarketSidewaysOrChaotic();
     }
     
