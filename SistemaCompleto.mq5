@@ -108,18 +108,17 @@ input string   Symbol_SundayOpen    = "00:00";
 input string   Symbol_SundayClose   = "00:00";
 
 // Parametri del filtro entropico
-input group "=== FILTRO ENTROPICO ==="
+input group "=== FILTRO ENTROPY GATE ==="
 input bool     EnableEntropyFilter = true;           // Attiva Filtro Entropico
-input int      Entropy_Period_Breve = 14;            // Periodo Entropia Breve
-input int      Entropy_Period_Medio = 42;            // Periodo Entropia Medio
-input int      Entropy_Period_Lungo = 100;           // Periodo Entropia Lungo
-input int      Entropy_Bins = 10;                    // Numero Bins Discretizzazione
-input double   Entropy_Sideways_Threshold = 0.85;    // Soglia Mercato Laterale
-input double   Entropy_Chaotic_Threshold = 0.95;     // Soglia Mercato Caotico
-input double   Entropy_Volatility_Min = 0.5;         // Soglia Volatilità Minima
-input double   Entropy_Volatility_Max = 3.0;         // Soglia Volatilità Massima
+input int      Entropy_Lookback = 18;                // Lookback Calcolo Entropia (barre)
+input int      ADX_Period = 12;                      // Periodo ADX
+input int      Choppiness_Period = 14;               // Periodo Choppiness Index
+input int      ATR_Period = 14;                      // Periodo ATR
+input double   Min_Tradability_Score = 0.60;         // Score Minimo per Trade (0-1)
 input int      Entropy_Confirmation_Bars = 2;        // Barre Consecutive per Conferma
 input double   Entropy_Hysteresis = 0.05;            // Fattore Isteresi (0.05 = 5%)
+input int      Entropy_Bins = 10;                    // Bins Discretizzazione
+input int      Pattern_Length = 3;                   // Lunghezza Pattern Binari (2-4)
 
 //+------------------------------------------------------------------+
 //| Parametri Adaptive Take Profit                                   |
@@ -237,12 +236,17 @@ int OnInit()
     // Configura il simbolo nel wrapper
     tradingWrapper.ConfigureSymbol(config);
     
-    // Configura il filtro entropico
+    // Configura il filtro entropico (nuovo Gold Entropy Gate)
     tradingWrapper.ConfigureEntropyFilter(
-        Entropy_Period_Breve, Entropy_Period_Medio, Entropy_Period_Lungo,
-        Entropy_Bins, Entropy_Sideways_Threshold, Entropy_Chaotic_Threshold,
-        Entropy_Volatility_Min, Entropy_Volatility_Max,
-        Entropy_Confirmation_Bars, Entropy_Hysteresis
+        Entropy_Lookback,
+        ADX_Period,
+        Choppiness_Period,
+        ATR_Period,
+        Min_Tradability_Score,
+        Entropy_Confirmation_Bars,
+        Entropy_Hysteresis,
+        Entropy_Bins,
+        Pattern_Length
     );
     
     // Configura l'Adaptive Take Profit se attivato
