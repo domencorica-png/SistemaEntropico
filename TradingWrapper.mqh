@@ -52,7 +52,7 @@ public:
         if(MQLInfoInteger(MQL_TESTER))
         {
             m_filterUpdateInterval = 300;      // Backtesting: non usato (aggiorna su candela)
-            m_managePositionsInterval = 60;    // Backtesting: 60 secondi (trailing meno frequente)
+            m_managePositionsInterval = 2;     // Backtesting: 2 secondi (trailing)
         }
         else
         {
@@ -348,7 +348,7 @@ private:
         if(m_symbolConfig.use_time_mgmt) CheckTimeManagement();
 
         // OTTIMIZZAZIONE CRITICA: ManagePositions throttling
-        // In backtest: ogni 60 secondi, Live: ogni secondo
+        // In backtest: ogni 2 secondi, Live: ogni secondo
         if(!m_symbolConfig.use_fixed_tp)
         {
             if(current - m_lastManagePositions >= m_managePositionsInterval || m_lastManagePositions == 0)
