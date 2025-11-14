@@ -28,16 +28,24 @@ private:
     TrailingData m_trailingPositions[];
     PendingSignal m_pendingSignals[];
     SimpleCrossTracker m_crossTrackers[];
-    
+
     datetime m_lastFilterUpdate;        // Ultimo aggiornamento del filtro
     datetime m_lastAdaptiveTPUpdate;   // Ultimo aggiornamento del modulo AdaptiveTP
+    datetime m_lastManagePositions;    // Ultimo aggiornamento ManagePositions
     int m_filterUpdateInterval;         // Intervallo di aggiornamento filtro in secondi
     int m_adaptiveTPUpdateInterval;    // Intervallo di aggiornamento AdaptiveTP in secondi
-    
+    int m_managePositionsInterval;     // Intervallo di aggiornamento ManagePositions in secondi
+
     bool m_useDynamicLotManagement;
     int m_backtestEndBufferDays;
     bool m_stochFilterPost;
-    
+
+    // OTTIMIZZAZIONE: Cache per valori SymbolInfo statici
+    double m_cached_point;
+    int m_cached_digits;
+    double m_cached_min_stop_distance;
+    bool m_symbol_info_cached;
+
 public:
     // Costruttore
     CTradingWrapper()
@@ -45,13 +53,28 @@ public:
         m_enableEntropyFilter = true;
         m_enableAdaptiveTP = false;    // Disattivato di default
         m_magicNumber = 123456;
-        m_filterUpdateInterval = 60;    // Aggiorna filtro ogni 60 secondi
-        m_adaptiveTPUpdateInterval = 60; // Aggiorna AdaptiveTP ogni 60 secondi
+
+        // OTTIMIZZAZIONE: Intervalli più lunghi in backtesting per massima velocità
+        if(MQLInfoInteger(MQL_TESTER))
+        {
+            m_filterUpdateInterval = 300;      // Backtesting: 5 minuti (il filtro non cambia rapidamente)
+            m_adaptiveTPUpdateInterval = 120;  // Backtesting: 2 minuti
+            m_managePositionsInterval = 2;     // Backtesting: 2 secondi (trailing meno frequente)
+        }
+        else
+        {
+            m_filterUpdateInterval = 60;       // Live: 1 minuto
+            m_adaptiveTPUpdateInterval = 60;   // Live: 1 minuto
+            m_managePositionsInterval = 1;     // Live: 1 secondo (più reattivo)
+        }
+
         m_lastFilterUpdate = 0;
         m_lastAdaptiveTPUpdate = 0;
+        m_lastManagePositions = 0;
         m_useDynamicLotManagement = true;
         m_backtestEndBufferDays = 30;
         m_stochFilterPost = false;
+        m_symbol_info_cached = false;
     }
     
     // Inizializzazione
@@ -384,11 +407,17 @@ private:
         }
         
         if(!m_symbolConfig.active) return;
-        
+
         if(m_symbolConfig.use_time_mgmt) CheckTimeManagement();
-        
-        ManagePositions();
-        
+
+        // OTTIMIZZAZIONE CRITICA: ManagePositions throttling per evitare chiamate ad ogni tick
+        // Chiamalo solo ogni m_managePositionsInterval secondi (default 1 secondo)
+        if(current - m_lastManagePositions >= m_managePositionsInterval || m_lastManagePositions == 0)
+        {
+            ManagePositions();
+            m_lastManagePositions = current;
+        }
+
         datetime ct = iTime(m_symbolConfig.symbol, m_symbolConfig.timeframe, 0);
         if(ct == m_symbolConfig.last_bar_time) return;
         m_symbolConfig.last_bar_time = ct;
@@ -858,10 +887,19 @@ private:
     
     void ManagePositions()
     {
-        double point = SymbolInfoDouble(m_symbolConfig.symbol, SYMBOL_POINT);
-        int digits = (int)SymbolInfoInteger(m_symbolConfig.symbol, SYMBOL_DIGITS);
-        double min_stop_distance = SymbolInfoInteger(m_symbolConfig.symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;
-        
+        // OTTIMIZZAZIONE: Usa cache per valori SymbolInfo statici
+        if(!m_symbol_info_cached)
+        {
+            m_cached_point = SymbolInfoDouble(m_symbolConfig.symbol, SYMBOL_POINT);
+            m_cached_digits = (int)SymbolInfoInteger(m_symbolConfig.symbol, SYMBOL_DIGITS);
+            m_cached_min_stop_distance = SymbolInfoInteger(m_symbolConfig.symbol, SYMBOL_TRADE_STOPS_LEVEL) * m_cached_point;
+            m_symbol_info_cached = true;
+        }
+
+        double point = m_cached_point;
+        int digits = m_cached_digits;
+        double min_stop_distance = m_cached_min_stop_distance;
+
         for(int i = ArraySize(m_trailingPositions) - 1; i >= 0; i--)
         {
             if(m_trailingPositions[i].symbol != m_symbolConfig.symbol) continue;
