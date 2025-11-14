@@ -160,10 +160,13 @@ public:
     {
         // Aggiorna il filtro entropico se necessario
         UpdateEntropyFilter();
-        
-        // Aggiorna il modulo AdaptiveTP se necessario
-        UpdateAdaptiveTP();
-        
+
+        // OTTIMIZZAZIONE: Aggiorna il modulo AdaptiveTP solo se attivo
+        if(m_enableAdaptiveTP)
+        {
+            UpdateAdaptiveTP();
+        }
+
         // Chiama la funzione Tick del bot originale
         BotOriginale_OnTick();
     }

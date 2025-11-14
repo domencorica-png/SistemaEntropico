@@ -124,7 +124,7 @@ input double   Entropy_Volatility_Max = 3.0;         // Soglia Volatilità Massi
 //| Formula: TP = (ATR*100)/Prezzo * [a*(EMA_ratio)^b + c]          |
 //+------------------------------------------------------------------+
 input group "=== ADAPTIVE TAKE PROFIT ==="
-input bool     EnableAdaptiveTP = true;             // Attiva Adaptive Take Profit
+input bool     EnableAdaptiveTP = false;            // Attiva Adaptive Take Profit (DISATTIVATO per performance)
 input double   AdaptiveTP_A = 3.2;                  // Coefficiente A (moltiplicatore)
 input double   AdaptiveTP_B = 0.75;                 // Coefficiente B (esponente)
 input double   AdaptiveTP_C = 0.03;                 // Coefficiente C (offset)
