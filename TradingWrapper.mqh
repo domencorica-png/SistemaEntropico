@@ -124,12 +124,11 @@ public:
                                double min_score = 0.60,
                                int confirmation_bars = 2,
                                double hysteresis = 0.05,
-                               int bins = 10,
                                int pattern_length = 3)
     {
         m_entropyFilter.Init(m_symbol, m_timeframe,
                            entropy_lookback, adx_period, chop_period, atr_period,
-                           min_score, confirmation_bars, hysteresis, bins, pattern_length);
+                           min_score, confirmation_bars, hysteresis, pattern_length);
     }
     
     // Configura il modulo AdaptiveTP

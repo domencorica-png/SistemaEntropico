@@ -117,7 +117,6 @@ input int      ATR_Period = 14;                      // Periodo ATR
 input double   Min_Tradability_Score = 0.60;         // Score Minimo per Trade (0-1)
 input int      Entropy_Confirmation_Bars = 2;        // Barre Consecutive per Conferma
 input double   Entropy_Hysteresis = 0.05;            // Fattore Isteresi (0.05 = 5%)
-input int      Entropy_Bins = 10;                    // Bins Discretizzazione
 input int      Pattern_Length = 3;                   // Lunghezza Pattern Binari (2-4)
 
 //+------------------------------------------------------------------+
@@ -245,7 +244,6 @@ int OnInit()
         Min_Tradability_Score,
         Entropy_Confirmation_Bars,
         Entropy_Hysteresis,
-        Entropy_Bins,
         Pattern_Length
     );
     

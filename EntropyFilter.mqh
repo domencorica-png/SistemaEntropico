@@ -25,7 +25,6 @@ private:
     // Entropy settings
     int m_entropy_lookback;          // Periodo per calcolo entropia (default: 18 per 10min)
     int m_pattern_length;            // Lunghezza pattern binari (2-4)
-    int m_bins;                      // Bins per discretizzazione
 
     // ADX settings
     int m_adx_period;                // Periodo ADX (default: 12 per 10min)
@@ -93,7 +92,6 @@ public:
         // Parametri ottimizzati per XAU/USD 10min
         m_entropy_lookback = 18;         // ~3 ore
         m_pattern_length = 3;
-        m_bins = 10;
 
         m_adx_period = 12;
         m_adx_min_trend = 22.0;
@@ -163,7 +161,6 @@ public:
               double min_score = 0.60,
               int confirmation_bars = 2,
               double hysteresis = 0.05,
-              int bins = 10,
               int pattern_length = 3)
     {
         m_symbol = symbol;
@@ -175,7 +172,6 @@ public:
         m_min_score_to_trade = min_score;
         m_confirmation_bars = confirmation_bars;
         m_hysteresis_factor = hysteresis;
-        m_bins = bins;
         m_pattern_length = pattern_length;
 
         // Crea handle ADX
