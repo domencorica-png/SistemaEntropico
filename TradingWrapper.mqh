@@ -48,11 +48,11 @@ public:
         m_enableEntropyFilter = true;
         m_magicNumber = 123456;
 
-        // OTTIMIZZAZIONE: Intervalli più lunghi in backtesting per massima velocità
+        // OTTIMIZZAZIONE: Intervalli ottimizzati per velocità
         if(MQLInfoInteger(MQL_TESTER))
         {
-            m_filterUpdateInterval = 300;      // Backtesting: 5 minuti (il filtro non cambia rapidamente)
-            m_managePositionsInterval = 2;     // Backtesting: 2 secondi (trailing meno frequente)
+            m_filterUpdateInterval = 300;      // Backtesting: non usato (aggiorna su candela)
+            m_managePositionsInterval = 60;    // Backtesting: 60 secondi (trailing meno frequente)
         }
         else
         {
@@ -122,11 +122,11 @@ public:
     // Funzione Tick wrapper
     void OnTick()
     {
-        // Aggiorna il filtro entropico se necessario
-        UpdateEntropyFilter();
-
-        // Chiama la funzione Tick del bot originale
+        // Chiama PRIMA la logica del bot (include controllo nuova candela)
         BotOriginale_OnTick();
+
+        // Aggiorna il filtro SOLO su nuova candela (dentro UpdateEntropyFilter c'è il controllo)
+        UpdateEntropyFilter();
     }
     
     // Funzione OnInit wrapper  
@@ -242,26 +242,19 @@ private:
         return true;
     }
     
-    // Aggiorna il filtro entropico - FORZATO AD OGNI TICK IN BACKTESTING
+    // Aggiorna il filtro entropico - SOLO SU NUOVA CANDELA
     void UpdateEntropyFilter()
     {
-        datetime current_time = TimeCurrent();
-        
-        // Forza l'aggiornamento ad ogni tick in backtesting per risultati consistenti
-        #ifdef __MQL5__
-        if(MQLInfoInteger(MQL_TESTER))
+        if(!m_enableEntropyFilter) return;
+
+        // Aggiorna SOLO su nuova candela, mai ad ogni tick
+        static datetime last_candle = 0;
+        datetime current_candle = iTime(m_symbol, m_timeframe, 0);
+
+        if(current_candle != last_candle)
         {
             m_entropyFilter.Update();
-            m_lastFilterUpdate = current_time;
-            return;
-        }
-        #endif
-        
-        if(m_enableEntropyFilter && 
-           (current_time - m_lastFilterUpdate >= m_filterUpdateInterval || m_lastFilterUpdate == 0))
-        {
-            m_entropyFilter.Update();
-            m_lastFilterUpdate = current_time;
+            last_candle = current_candle;
         }
     }
 
@@ -354,12 +347,15 @@ private:
 
         if(m_symbolConfig.use_time_mgmt) CheckTimeManagement();
 
-        // OTTIMIZZAZIONE CRITICA: ManagePositions throttling per evitare chiamate ad ogni tick
-        // Chiamalo solo ogni m_managePositionsInterval secondi (default 1 secondo)
-        if(current - m_lastManagePositions >= m_managePositionsInterval || m_lastManagePositions == 0)
+        // OTTIMIZZAZIONE CRITICA: ManagePositions throttling
+        // In backtest: ogni 60 secondi, Live: ogni secondo
+        if(!m_symbolConfig.use_fixed_tp)
         {
-            ManagePositions();
-            m_lastManagePositions = current;
+            if(current - m_lastManagePositions >= m_managePositionsInterval || m_lastManagePositions == 0)
+            {
+                ManagePositions();
+                m_lastManagePositions = current;
+            }
         }
 
         datetime ct = iTime(m_symbolConfig.symbol, m_symbolConfig.timeframe, 0);

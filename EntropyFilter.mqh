@@ -228,13 +228,18 @@ public:
         // 7. Aggiorna stato del gate
         UpdateGateState();
 
-        // 8. Log periodico (ogni 20 update)
-        static int log_counter = 0;
-        log_counter++;
-        if(log_counter % 20 == 0)
+        // 8. Log periodico (solo in live, mai in backtest)
+        #ifdef __MQL5__
+        if(!MQLInfoInteger(MQL_TESTER))
         {
-            PrintGateStatus();
+            static int log_counter = 0;
+            log_counter++;
+            if(log_counter % 20 == 0)
+            {
+                PrintGateStatus();
+            }
         }
+        #endif
     }
 
     //+------------------------------------------------------------------+
