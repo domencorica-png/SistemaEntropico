@@ -118,6 +118,19 @@ input int      Entropy_Confirmation_Bars = 2;        // Barre di Conferma
 input double   Entropy_Hysteresis = 0.05;            // Fattore Hysteresis
 input int      Entropy_Pattern_Length = 3;           // Lunghezza Pattern Binari
 
+//+------------------------------------------------------------------+
+//| Parametri Adaptive Take Profit                                   |
+//| Formula: TP = (ATR*100)/Prezzo * [a*(EMA_ratio)^b + c]          |
+//+------------------------------------------------------------------+
+input group "=== ADAPTIVE TAKE PROFIT ==="
+input bool     EnableAdaptiveTP = false;            // Attiva Adaptive Take Profit (DISATTIVATO per performance)
+input double   AdaptiveTP_A = 3.2;                  // Coefficiente A (moltiplicatore)
+input double   AdaptiveTP_B = 0.75;                 // Coefficiente B (esponente)
+input double   AdaptiveTP_C = 0.03;                 // Coefficiente C (offset)
+input double   AdaptiveTP_Cap = 0.6;                // CAP massimo (%)
+input double   AdaptiveTP_Floor = 0.2;              // FLOOR minimo (%)
+input double   AdaptiveTP_Fallback = 0.4;           // Valore fallback (%)
+
 // Variabile globale per il wrapper
 CTradingWrapper tradingWrapper;
 
@@ -126,12 +139,13 @@ CTradingWrapper tradingWrapper;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-    // Inizializza il wrapper
+    // Inizializza il wrapper - aggiungi il parametro EnableAdaptiveTP
     if(!tradingWrapper.Init(Symbol_Name, Symbol_TimeFrame, MagicNumber,
                            EnableEntropyFilter,
                            UseDynamicLotManagement,
                            BacktestEndBufferDays,
-                           Stoch_Filter_Post))
+                           Stoch_Filter_Post,
+                           EnableAdaptiveTP))  // <-- Parametro aggiunto
     {
         Print("ERRORE: Impossibile inizializzare il wrapper");
         return(INIT_FAILED);
@@ -226,6 +240,25 @@ int OnInit()
         Entropy_ATR_Period, Entropy_Min_Score, Entropy_Confirmation_Bars,
         Entropy_Hysteresis, Entropy_Pattern_Length
     );
+
+    // Configura l'Adaptive Take Profit se attivato
+    if(EnableAdaptiveTP)
+    {
+        AdaptiveTPConfig tpConfig;
+        tpConfig.active = true;
+        tpConfig.a = AdaptiveTP_A;
+        tpConfig.b = AdaptiveTP_B;
+        tpConfig.c = AdaptiveTP_C;
+        tpConfig.cap = AdaptiveTP_Cap;
+        tpConfig.floor = AdaptiveTP_Floor;
+        tpConfig.fallback = AdaptiveTP_Fallback;
+
+        tradingWrapper.ConfigureAdaptiveTP(tpConfig);
+        Print("Adaptive Take Profit ATTIVATO con formula esponenziale");
+        Print("  Formula: TP = (ATR*100)/Prezzo * [a*(EMA_ratio)^b + c]");
+        Print("  Parametri: a=", AdaptiveTP_A, " b=", AdaptiveTP_B, " c=", AdaptiveTP_C);
+        Print("  Limiti: CAP=", AdaptiveTP_Cap, "% FLOOR=", AdaptiveTP_Floor, "% FALLBACK=", AdaptiveTP_Fallback, "%");
+    }
 
     // Chiama l'OnInit del wrapper
     return tradingWrapper.OnInit();

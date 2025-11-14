@@ -72,6 +72,7 @@ struct TrailingData
    bool breakeven_first_activation_done;
    bool breakeven_price_went_below_trigger;
    bool phase_one_completed;
+   double adaptive_trailing_start_percent;  // Valore adaptivo calcolato all'apertura del trade
 };
 
 struct PendingSignal

@@ -8,14 +8,17 @@
 // Include i file necessari
 #include "EntropyFilter.mqh"
 #include "BotOriginale.mqh"
+#include "AdaptiveTakeProfit.mqh"  // Inclusione modulo Adaptive Take Profit
 
 class CTradingWrapper
 {
 private:
     CTrade m_trade;                    // Oggetto di trading
     CEntropyFilter m_entropyFilter;    // Filtro entropico CORRETTO
+    CAdaptiveTakeProfit m_adaptiveTP;  // Modulo Take Profit Adattativo
 
     bool m_enableEntropyFilter;        // Flag per attivare/disattivare il filtro
+    bool m_enableAdaptiveTP;           // Flag per attivare/disattivare il TP adattativo
     int m_magicNumber;                  // Magic number per identificare le posizioni
     
     string m_symbol;                    // Simbolo di trading
@@ -27,8 +30,10 @@ private:
     SimpleCrossTracker m_crossTrackers[];
 
     datetime m_lastFilterUpdate;        // Ultimo aggiornamento del filtro
+    datetime m_lastAdaptiveTPUpdate;   // Ultimo aggiornamento del modulo AdaptiveTP
     datetime m_lastManagePositions;    // Ultimo aggiornamento ManagePositions
     int m_filterUpdateInterval;         // Intervallo di aggiornamento filtro in secondi
+    int m_adaptiveTPUpdateInterval;    // Intervallo di aggiornamento AdaptiveTP in secondi
     int m_managePositionsInterval;     // Intervallo di aggiornamento ManagePositions in secondi
 
     bool m_useDynamicLotManagement;
@@ -46,21 +51,25 @@ public:
     CTradingWrapper()
     {
         m_enableEntropyFilter = true;
+        m_enableAdaptiveTP = false;    // Disattivato di default
         m_magicNumber = 123456;
 
-        // OTTIMIZZAZIONE: Intervalli ottimizzati per velocità
+        // OTTIMIZZAZIONE: Intervalli più lunghi in backtesting per massima velocità
         if(MQLInfoInteger(MQL_TESTER))
         {
-            m_filterUpdateInterval = 300;      // Backtesting: non usato (aggiorna su candela)
-            m_managePositionsInterval = 2;     // Backtesting: 2 secondi (trailing)
+            m_filterUpdateInterval = 300;      // Backtesting: 5 minuti (il filtro non cambia rapidamente)
+            m_adaptiveTPUpdateInterval = 120;  // Backtesting: 2 minuti
+            m_managePositionsInterval = 2;     // Backtesting: 2 secondi (trailing meno frequente)
         }
         else
         {
             m_filterUpdateInterval = 60;       // Live: 1 minuto
+            m_adaptiveTPUpdateInterval = 60;   // Live: 1 minuto
             m_managePositionsInterval = 1;     // Live: 1 secondo (più reattivo)
         }
 
         m_lastFilterUpdate = 0;
+        m_lastAdaptiveTPUpdate = 0;
         m_lastManagePositions = 0;
         m_useDynamicLotManagement = true;
         m_backtestEndBufferDays = 30;
@@ -73,23 +82,45 @@ public:
              bool enableEntropyFilter = true,
              bool useDynamicLotManagement = true,
              int backtestEndBufferDays = 30,
-             bool stochFilterPost = false)
+             bool stochFilterPost = false,
+             bool enableAdaptiveTP = false)  // Parametro aggiuntivo per TP adattativo
     {
         m_symbol = symbol;
         m_timeframe = timeframe;
         m_magicNumber = magicNumber;
         m_enableEntropyFilter = enableEntropyFilter;
+        m_enableAdaptiveTP = enableAdaptiveTP;  // Imposta lo stato del TP adattativo
         m_useDynamicLotManagement = useDynamicLotManagement;
         m_backtestEndBufferDays = backtestEndBufferDays;
         m_stochFilterPost = stochFilterPost;
 
+        // Inizializza il modulo AdaptiveTP se attivato
+        if(m_enableAdaptiveTP)
+        {
+            AdaptiveTPConfig tpConfig;
+            tpConfig.active = true;
+            // Valori di default con formula esponenziale
+            tpConfig.a = 3.2;        // Moltiplicatore
+            tpConfig.b = 0.75;       // Esponente
+            tpConfig.c = 0.03;       // Offset
+            tpConfig.cap = 0.6;      // 0.6% CAP massimo
+            tpConfig.floor = 0.2;    // 0.2% minimo
+            tpConfig.fallback = 0.4; // 0.4% fallback
+
+            if(!m_adaptiveTP.Init(m_symbol, m_timeframe, tpConfig))
+            {
+                Print("WARNING: Impossibile inizializzare AdaptiveTP - disattivato");
+                m_enableAdaptiveTP = false;
+            }
+        }
+
         // Configura l'oggetto di trading
         m_trade.SetExpertMagicNumber(m_magicNumber);
         m_trade.SetDeviationInPoints(10);
-        
+
         // Inizializza la configurazione del simbolo
         InitializeSymbolConfig();
-            
+
         return true;
     }
     
@@ -119,6 +150,13 @@ public:
                            atr_period, min_score, confirmation_bars, hysteresis, pattern_length);
     }
 
+    // Configura il modulo AdaptiveTP
+    void ConfigureAdaptiveTP(const AdaptiveTPConfig &config)
+    {
+        m_adaptiveTP.Configure(config);
+        m_enableAdaptiveTP = config.active;
+    }
+
     // Funzione Tick wrapper
     void OnTick()
     {
@@ -127,6 +165,12 @@ public:
 
         // Aggiorna il filtro SOLO su nuova candela (dentro UpdateEntropyFilter c'è il controllo)
         UpdateEntropyFilter();
+
+        // OTTIMIZZAZIONE: Aggiorna il modulo AdaptiveTP solo se attivo
+        if(m_enableAdaptiveTP)
+        {
+            UpdateAdaptiveTP();
+        }
     }
     
     // Funzione OnInit wrapper  
@@ -255,6 +299,23 @@ private:
         {
             m_entropyFilter.Update();
             last_candle = current_candle;
+        }
+    }
+
+    // Aggiorna il modulo AdaptiveTP
+    void UpdateAdaptiveTP()
+    {
+        if(!m_enableAdaptiveTP) return;
+
+        datetime current_time = TimeCurrent();
+        if(current_time - m_lastAdaptiveTPUpdate >= m_adaptiveTPUpdateInterval || m_lastAdaptiveTPUpdate == 0)
+        {
+            if(!m_adaptiveTP.UpdateData())
+            {
+                Print("ERRORE AdaptiveTP: Aggiornamento fallito - disattivazione");
+                m_enableAdaptiveTP = false;
+            }
+            m_lastAdaptiveTPUpdate = current_time;
         }
     }
 
@@ -432,6 +493,10 @@ private:
                     m_trailingPositions[sz].breakeven_first_activation_done = false;
                     m_trailingPositions[sz].breakeven_price_went_below_trigger = false;
                     m_trailingPositions[sz].phase_one_completed = false;
+
+                    // Usa il valore fisso per posizioni orfane (non abbiamo i dati EMA al momento apertura)
+                    m_trailingPositions[sz].adaptive_trailing_start_percent = m_symbolConfig.trailing_start_percent;
+
                     BotCore_Log("POSIZIONE ORFANA RECUPERATA: Ticket: " + IntegerToString(ticket), m_magicNumber);
                 }
             }
@@ -799,6 +864,23 @@ private:
                     m_trailingPositions[sz].breakeven_first_activation_done = false;
                     m_trailingPositions[sz].breakeven_price_went_below_trigger = false;
                     m_trailingPositions[sz].phase_one_completed = false;
+
+                    // Calcola il valore adaptivo del TrailingStartPercent per questo trade
+                    if(m_enableAdaptiveTP)
+                    {
+                        double ema20_val = m_symbolConfig.ema20_buffer[0];
+                        double ema50_val = m_symbolConfig.ema50_buffer[0];
+                        double adaptive_percent = m_adaptiveTP.CalculateTrailingStartPercent(p, ema20_val, ema50_val);
+                        m_trailingPositions[sz].adaptive_trailing_start_percent = adaptive_percent;
+
+                        BotCore_Log(m_symbolConfig.symbol + " - AdaptiveTP: Calcolato trailing start = " +
+                                DoubleToString(adaptive_percent, 4) + "%", m_magicNumber);
+                    }
+                    else
+                    {
+                        // Usa il valore fisso se il modulo è disattivato
+                        m_trailingPositions[sz].adaptive_trailing_start_percent = m_symbolConfig.trailing_start_percent;
+                    }
                 }
             }
         }
@@ -850,10 +932,10 @@ private:
                 m_trailingPositions[i].highest_profit = pp;
             }
             
-            if(!m_trailingPositions[i].phase_one_completed && pp >= m_symbolConfig.trailing_start_percent)
+            if(!m_trailingPositions[i].phase_one_completed && pp >= m_trailingPositions[i].adaptive_trailing_start_percent)
             {
                 bool is_buy = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY);
-                double target_sl_percent = m_symbolConfig.trailing_start_percent - m_symbolConfig.trailing_start_distance;
+                double target_sl_percent = m_trailingPositions[i].adaptive_trailing_start_percent - m_symbolConfig.trailing_start_distance;
                 double new_sl_price;
                 
                 if(is_buy)
@@ -897,7 +979,7 @@ private:
             }
             
             else if(m_trailingPositions[i].phase_one_completed && !m_trailingPositions[i].trailing_active &&
-                    pp >= (m_symbolConfig.trailing_start_percent + m_symbolConfig.trailing_max_percent))
+                    pp >= (m_trailingPositions[i].adaptive_trailing_start_percent + m_symbolConfig.trailing_max_percent))
             {
                 m_trailingPositions[i].trailing_active = true;
             }
