@@ -190,14 +190,17 @@ public:
             tp_percent = m_config.floor;
         }
 
-        // Log dettagliato per debug
-        string direction = is_long ? "LONG" : "SHORT";
-        Print("AdaptiveTP [", direction, "]: Prezzo=", DoubleToString(current_price, 2),
-              " ATR=", DoubleToString(atr, 2), " (", DoubleToString(atr_percent, 4), "%)",
-              " | EMA20=", DoubleToString(ema20, 2), " EMA50=", DoubleToString(ema50, 2),
-              " | Ratio=", DoubleToString(ema_ratio, 4),
-              " | Mult=", DoubleToString(multiplier, 4),
-              " | TP=", DoubleToString(tp_percent, 4), "%");
+        // OTTIMIZZATO: Log dettagliato solo se NON in backtesting
+        if(!MQLInfoInteger(MQL_TESTER))
+        {
+            string direction = is_long ? "LONG" : "SHORT";
+            Print("AdaptiveTP [", direction, "]: Prezzo=", DoubleToString(current_price, 2),
+                  " ATR=", DoubleToString(atr, 2), " (", DoubleToString(atr_percent, 4), "%)",
+                  " | EMA20=", DoubleToString(ema20, 2), " EMA50=", DoubleToString(ema50, 2),
+                  " | Ratio=", DoubleToString(ema_ratio, 4),
+                  " | Mult=", DoubleToString(multiplier, 4),
+                  " | TP=", DoubleToString(tp_percent, 4), "%");
+        }
 
         return tp_percent;
     }

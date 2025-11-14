@@ -162,27 +162,35 @@ public:
     {
         if(m_enableEntropyFilter && ShouldBlockTrade())
         {
-            Print("ENTROPY FILTER: TRADE BLOCCATO - Mercato Laterale/Caotico");
-            Print("  Entropia Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4));
-            Print("  Volatilità: ", DoubleToString(m_entropyFilter.GetVolatility(), 4), "%");
-            Print("  Stato: ", m_entropyFilter.IsSideways() ? "LATERALE" : "CAOTICO");
+            // OTTIMIZZATO: Log solo se NON in backtesting (rallenta molto)
+            if(!MQLInfoInteger(MQL_TESTER))
+            {
+                Print("ENTROPY FILTER: TRADE BLOCCATO - Mercato Laterale/Caotico");
+                Print("  Entropia Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4));
+                Print("  Volatilità: ", DoubleToString(m_entropyFilter.GetVolatility(), 4), "%");
+                Print("  Stato: ", m_entropyFilter.IsSideways() ? "LATERALE" : "CAOTICO");
+            }
             return false;
         }
-        
+
         return m_trade.Buy(lots, symbol, price, sl, tp, comment);
     }
-    
+
     bool Sell(double lots, string symbol, double price, double sl, double tp, string comment)
     {
         if(m_enableEntropyFilter && ShouldBlockTrade())
         {
-            Print("ENTROPY FILTER: TRADE BLOCCATO - Mercato Laterale/Caotico");
-            Print("  Entropia Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4));
-            Print("  Volatilità: ", DoubleToString(m_entropyFilter.GetVolatility(), 4), "%");
-            Print("  Stato: ", m_entropyFilter.IsSideways() ? "LATERALE" : "CAOTICO");
+            // OTTIMIZZATO: Log solo se NON in backtesting (rallenta molto)
+            if(!MQLInfoInteger(MQL_TESTER))
+            {
+                Print("ENTROPY FILTER: TRADE BLOCCATO - Mercato Laterale/Caotico");
+                Print("  Entropia Breve: ", DoubleToString(m_entropyFilter.GetEntropyBreve(), 4));
+                Print("  Volatilità: ", DoubleToString(m_entropyFilter.GetVolatility(), 4), "%");
+                Print("  Stato: ", m_entropyFilter.IsSideways() ? "LATERALE" : "CAOTICO");
+            }
             return false;
         }
-        
+
         return m_trade.Sell(lots, symbol, price, sl, tp, comment);
     }
     
@@ -294,10 +302,9 @@ private:
     bool ShouldBlockTrade()
     {
         if(!m_enableEntropyFilter) return false;
-        
-        // Forza l'aggiornamento prima di ogni decisione di trading
-        m_entropyFilter.Update();
-        
+
+        // USA I DATI GIÀ IN CACHE - NON FORZARE L'AGGIORNAMENTO!
+        // L'aggiornamento viene fatto ogni 60 secondi in UpdateEntropyFilter()
         return m_entropyFilter.IsMarketSidewaysOrChaotic();
     }
     
@@ -1138,7 +1145,11 @@ private:
     
     void BotCore_Log(string msg, int magic_number)
     {
-        Print("[BotCore-" + IntegerToString(magic_number) + "] " + msg);
+        // OTTIMIZZATO: Disabilita log in backtesting per migliorare performance
+        if(!MQLInfoInteger(MQL_TESTER))
+        {
+            Print("[BotCore-" + IntegerToString(magic_number) + "] " + msg);
+        }
     }
     
     double CalculateEMASlopeAbs(const double &ema50_buffer[], int ema_slope_period)

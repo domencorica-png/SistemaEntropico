@@ -163,83 +163,77 @@ private:
         ArrayInitialize(m_returns_breve, 0.0);
         ArrayInitialize(m_returns_medio, 0.0);
         ArrayInitialize(m_returns_lungo, 0.0);
-        
-        // Calcola returns logaritmici per ogni timeframe
-        for(int i = 0; i < m_period_breve; i++)
-        {
-            if(i + 1 < total_bars && close_prices[i+1] != 0)
-            {
-                m_returns_breve[i] = MathLog(close_prices[i] / close_prices[i+1]);
-            }
-        }
-        
-        for(int i = 0; i < m_period_medio; i++)
-        {
-            if(i + 1 < total_bars && close_prices[i+1] != 0)
-            {
-                m_returns_medio[i] = MathLog(close_prices[i] / close_prices[i+1]);
-            }
-        }
-        
+
+        // OTTIMIZZATO: Calcola returns logaritmici in UN SOLO LOOP
+        // Calcola fino al periodo più lungo e riempi tutti gli array insieme
         for(int i = 0; i < m_period_lungo; i++)
         {
             if(i + 1 < total_bars && close_prices[i+1] != 0)
             {
-                m_returns_lungo[i] = MathLog(close_prices[i] / close_prices[i+1]);
+                double return_value = MathLog(close_prices[i] / close_prices[i+1]);
+
+                if(i < m_period_breve) m_returns_breve[i] = return_value;
+                if(i < m_period_medio) m_returns_medio[i] = return_value;
+                m_returns_lungo[i] = return_value;
             }
         }
-        
+
         return true;
     }
     
-    // Calcola l'entropia di Shannon CORRETTAMENTE (base 2)
+    // Calcola l'entropia di Shannon CORRETTAMENTE (base 2) - OTTIMIZZATO
     double CalculateEntropy(const double &returns[], int period)
     {
         if(period <= 0 || ArraySize(returns) < period) return 0.0;
-        
-        // Trova minimo e massimo dei returns
+
+        // OTTIMIZZATO: Trova min/max E conta bin in DUE PASSAGGI invece di TRE
+        // Primo passaggio: trova min/max
         double min_val = returns[0];
         double max_val = returns[0];
-        
-        for(int i = 0; i < period; i++)
+
+        for(int i = 1; i < period; i++)
         {
             if(returns[i] < min_val) min_val = returns[i];
-            if(returns[i] > max_val) max_val = returns[i];
+            else if(returns[i] > max_val) max_val = returns[i];
         }
-        
+
         // Evita divisione per zero
         if(max_val == min_val) return 0.0;
-        
+
         // Calcola la larghezza di ogni bin
         double bin_width = (max_val - min_val) / m_bins;
         if(bin_width == 0) return 0.0;
-        
-        // Conta le occorrenze in ogni bin
+
+        // Prepara array per bin counts
         int bin_counts[];
         ArrayResize(bin_counts, m_bins + 1);
         ArrayInitialize(bin_counts, 0);
-        
+
+        // Secondo passaggio: Conta bin E calcola entropia direttamente
+        // Pre-calcola 1/period e max_entropy per evitare divisioni ripetute
+        double inv_period = 1.0 / (double)period;
+        double entropy = 0.0;
+
+        // Conta le occorrenze in ogni bin
         for(int i = 0; i < period; i++)
         {
             double r = returns[i];
             int bin_index;
-            
+
             if(r <= min_val) bin_index = 0;
             else if(r >= max_val) bin_index = m_bins;
             else bin_index = (int)((r - min_val) / bin_width);
-            
+
             if(bin_index >= 0 && bin_index <= m_bins)
                 bin_counts[bin_index]++;
         }
-        
-        // Calcola le probabilità e l'entropia - CORREZIONE FONDAMENTALE
-        double entropy = 0.0;
+
+        // Calcola entropia dai bin counts
         for(int i = 0; i <= m_bins; i++)
         {
-            double probability = (double)bin_counts[i] / (double)period;
-            if(probability > 0)
+            if(bin_counts[i] > 0)
             {
-                // Usa Log2 invece di MathLog (logaritmo in base 2)
+                double probability = (double)bin_counts[i] * inv_period;
                 entropy -= probability * Log2(probability);
             }
         }
@@ -248,7 +242,7 @@ private:
         double max_entropy = Log2((double)(m_bins + 1));
         if(max_entropy > 0)
             entropy = entropy / max_entropy;
-            
+
         return MathMax(0.0, MathMin(1.0, entropy));
     }
     
