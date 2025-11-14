@@ -105,16 +105,18 @@ public:
         }
     }
     
-    // Configura il filtro entropico - CORRETTO CON PARAMETRI AGGIUNTIVI
-    void ConfigureEntropyFilter(int period_breve = 14, int period_medio = 42, int period_lungo = 100,
-                               int bins = 10, double sideways_threshold = 0.85, 
-                               double chaotic_threshold = 0.95, double volatility_min = 0.5,
-                               double volatility_max = 3.0, int confirmation_bars = 2,
-                               double hysteresis = 0.05)  // Parametri aggiuntivi per la conferma
+    // Configura il filtro entropico - Gold Entropy Gate Filter
+    void ConfigureEntropyFilter(int entropy_lookback = 18,
+                               int adx_period = 12,
+                               int chop_period = 14,
+                               int atr_period = 14,
+                               double min_score = 0.60,
+                               int confirmation_bars = 2,
+                               double hysteresis = 0.05,
+                               int pattern_length = 3)
     {
-        m_entropyFilter.Init(m_symbol, m_timeframe, period_breve, period_medio, period_lungo,
-                           bins, sideways_threshold, chaotic_threshold, volatility_min, volatility_max,
-                           confirmation_bars, hysteresis);  // Passa i nuovi parametri
+        m_entropyFilter.Init(m_symbol, m_timeframe, entropy_lookback, adx_period, chop_period,
+                           atr_period, min_score, confirmation_bars, hysteresis, pattern_length);
     }
 
     // Funzione Tick wrapper

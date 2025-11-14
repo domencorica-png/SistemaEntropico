@@ -106,17 +106,17 @@ input string   Symbol_SaturdayClose = "00:00";
 input string   Symbol_SundayOpen    = "00:00";
 input string   Symbol_SundayClose   = "00:00";
 
-// Parametri del filtro entropico
-input group "=== FILTRO ENTROPICO ==="
+// Parametri Gold Entropy Gate Filter
+input group "=== GOLD ENTROPY GATE FILTER ==="
 input bool     EnableEntropyFilter = true;           // Attiva Filtro Entropico
-input int      Entropy_Period_Breve = 14;            // Periodo Entropia Breve
-input int      Entropy_Period_Medio = 42;            // Periodo Entropia Medio  
-input int      Entropy_Period_Lungo = 100;           // Periodo Entropia Lungo
-input int      Entropy_Bins = 10;                    // Numero Bins Discretizzazione
-input double   Entropy_Sideways_Threshold = 0.85;    // Soglia Mercato Laterale
-input double   Entropy_Chaotic_Threshold = 0.95;     // Soglia Mercato Caotico
-input double   Entropy_Volatility_Min = 0.5;         // Soglia Volatilità Minima
-input double   Entropy_Volatility_Max = 3.0;         // Soglia Volatilità Massima
+input int      Entropy_Lookback = 18;                // Periodo Lookback Entropia (~3 ore)
+input int      Entropy_ADX_Period = 12;              // Periodo ADX
+input int      Entropy_Chop_Period = 14;             // Periodo Choppiness Index
+input int      Entropy_ATR_Period = 14;              // Periodo ATR
+input double   Entropy_Min_Score = 0.60;             // Score Minimo per Trade (0-1)
+input int      Entropy_Confirmation_Bars = 2;        // Barre di Conferma
+input double   Entropy_Hysteresis = 0.05;            // Fattore Hysteresis
+input int      Entropy_Pattern_Length = 3;           // Lunghezza Pattern Binari
 
 // Variabile globale per il wrapper
 CTradingWrapper tradingWrapper;
@@ -220,11 +220,11 @@ int OnInit()
     // Configura il simbolo nel wrapper
     tradingWrapper.ConfigureSymbol(config);
     
-    // Configura il filtro entropico
+    // Configura il Gold Entropy Gate Filter
     tradingWrapper.ConfigureEntropyFilter(
-        Entropy_Period_Breve, Entropy_Period_Medio, Entropy_Period_Lungo,
-        Entropy_Bins, Entropy_Sideways_Threshold, Entropy_Chaotic_Threshold,
-        Entropy_Volatility_Min, Entropy_Volatility_Max
+        Entropy_Lookback, Entropy_ADX_Period, Entropy_Chop_Period,
+        Entropy_ATR_Period, Entropy_Min_Score, Entropy_Confirmation_Bars,
+        Entropy_Hysteresis, Entropy_Pattern_Length
     );
 
     // Chiama l'OnInit del wrapper
