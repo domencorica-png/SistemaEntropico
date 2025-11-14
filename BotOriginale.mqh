@@ -6,7 +6,6 @@
 #property copyright "Copyright 2025, Your Name"
 #property version   "1.00"
 #include <Trade\Trade.mqh>
-#include "AdaptiveTakeProfit.mqh"  // Include per compatibilità futura
 
 //--- Strutture
 struct SymbolConfig

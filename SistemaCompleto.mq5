@@ -11,7 +11,6 @@
 
 // Include i file necessari
 #include "TradingWrapper.mqh"
-#include "AdaptiveTakeProfit.mqh"  // Include per il modulo Adaptive Take Profit
 
 // Parametri del bot originale (visibili nella finestra di input)
 input group "=== CONFIGURAZIONE GLOBALE ==="
