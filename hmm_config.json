@@ -1,0 +1,168 @@
+{
+  "_comment": "========================================",
+  "_info": "Configurazione HMM Trend Filter - GOLD 10min",
+  "_version": "2.0 - Simplified",
+  "_comment2": "========================================",
+
+  "symbol": {
+    "name": "XAUUSD",
+    "timeframe": "10min",
+    "description": "Gold trading on 10-minute timeframe"
+  },
+
+  "features": {
+    "_comment": "Solo 3 features essenziali per convergenza ottimale",
+    "momentum": {
+      "enabled": true,
+      "return_periods": [1, 3, 6],
+      "_info": "Multi-period returns: 10min, 30min, 1h"
+    },
+    "volatility": {
+      "enabled": true,
+      "atr_period": 14,
+      "_info": "ATR period for volatility measurement"
+    },
+    "directionality": {
+      "enabled": true,
+      "adx_period": 14,
+      "lateral_threshold": 25,
+      "_info": "ADX < 25 indicates lateral/ranging market"
+    }
+  },
+
+  "hmm": {
+    "_comment": "Hidden Markov Model configuration",
+    "n_states": 3,
+    "_info_states": "1=BULLISH, 2=BEARISH, 3=LATERAL",
+
+    "covariance_type": "full",
+    "_options_covariance": ["full", "diag", "spherical"],
+    "_info_covariance": "full = ogni stato ha propria matrice covarianza (migliore ma più lento)",
+
+    "algorithm": "viterbi",
+    "_options_algorithm": ["viterbi", "map"],
+
+    "n_iter": 100,
+    "_info_n_iter": "Max iterations for training convergence",
+
+    "tol": 0.01,
+    "_info_tol": "Convergence tolerance",
+
+    "random_state": 42,
+    "_info_random": "For reproducibility"
+  },
+
+  "training": {
+    "_comment": "Online/Adaptive Learning configuration",
+
+    "training_window": 1000,
+    "_info_window": "Training window size (~7 days for 10min = 1008 bars)",
+
+    "min_samples": 500,
+    "_info_min": "Minimum samples required before first training",
+
+    "retrain_frequency": 100,
+    "_info_retrain": "Retrain model every N new bars (~16 hours for 10min)",
+
+    "walk_forward": true,
+    "_info_walk": "true = sliding window, false = expanding window"
+  },
+
+  "validation": {
+    "_comment": "Regime validation and filtering",
+
+    "confidence_threshold": 0.65,
+    "_info_confidence": "Minimum confidence to accept regime (0-1)",
+    "_recommendation": "Increase (0.7-0.8) if too many false signals",
+
+    "adx_validation": {
+      "enabled": true,
+      "threshold": 25,
+      "weight": 0.3,
+      "_info": "ADX < threshold confirms LATERAL regime"
+    },
+
+    "persistence": {
+      "enabled": true,
+      "min_bars": 3,
+      "_info_min_bars": "Minimum consecutive bars before regime change",
+
+      "hysteresis": 0.1,
+      "_info_hysteresis": "Extra confidence margin required for regime change"
+    }
+  },
+
+  "output": {
+    "_comment": "Output file configuration for MT5 integration",
+
+    "regime_file": {
+      "path": "./output/hmm_regime.txt",
+      "format": "simple",
+      "_options_format": ["simple", "detailed"],
+      "_info": "simple = solo numero 1/2/3, detailed = con metadata"
+    },
+
+    "backtest_file": {
+      "path": "./output/hmm_regimes_backtest.csv",
+      "_info": "File completo per backtesting con tutti i regimi storici"
+    }
+  },
+
+  "logging": {
+    "enabled": true,
+    "level": "INFO",
+    "_options_level": ["DEBUG", "INFO", "WARNING", "ERROR"],
+    "file": "./logs/hmm_filter.log",
+    "console": true
+  },
+
+  "performance": {
+    "_comment": "Performance and optimization settings",
+
+    "use_cache": true,
+    "cache_validity_seconds": 30,
+    "_info_cache": "Cache predictions for N seconds to reduce computation",
+
+    "parallel_processing": false,
+    "_info_parallel": "Not yet implemented - for future use"
+  },
+
+  "backtesting": {
+    "_comment": "Settings specific for backtesting mode",
+
+    "export_all_regimes": true,
+    "_info_export": "Generate regime for every historical bar",
+
+    "include_confidence": true,
+    "include_probabilities": true,
+
+    "output_format": "csv",
+    "_options_format": ["csv", "json", "both"]
+  },
+
+  "mt5_integration": {
+    "_comment": "MetaTrader 5 integration settings",
+
+    "update_interval_seconds": 60,
+    "_info_interval": "How often to update regime file (seconds)",
+
+    "new_bar_mode": false,
+    "_info_newbar": "true = update only on new bar, false = update periodically"
+  },
+
+  "advanced": {
+    "_comment": "Advanced settings - modify only if you know what you're doing",
+
+    "ensemble": {
+      "enabled": false,
+      "n_models": 3,
+      "_info": "Use ensemble of N models for more robust predictions (slower)"
+    },
+
+    "feature_selection": {
+      "enabled": false,
+      "method": "mrmr",
+      "_info": "Automatic feature selection (not recommended with only 3 features)"
+    }
+  }
+}
