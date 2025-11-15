@@ -150,29 +150,25 @@ void OnStart()
     PrintFormat("║  Periodo: %s  -  %s   ║",
                 TimeToString(rates[copied-1].time, TIME_DATE),
                 TimeToString(rates[0].time, TIME_DATE));
-    PrintFormat("║  Dimensione file: ~%-38.2f KB ║", (double)FileSize(file_handle) / 1024.0);
     Print("╠═══════════════════════════════════════════════════════════════╣");
     Print("║  PROSSIMI PASSI:                                              ║");
-    Print("║  1. Copia file da: MQL5/Files/" + folder_path + "              ║");
-    Print("║  2. Esegui Python batch processor:                            ║");
-    Print("║     python hmm_backtest_processor.py                          ║");
-    Print("║  3. Importa risultati in MT5 con custom indicator             ║");
+    Print("║  1. Apri Esplora Risorse Windows                              ║");
+    Print("║  2. Vai in: MQL5/Files/hmm_data/                              ║");
+    Print("║  3. Troverai: " + ExportFileName + "                          ║");
+    Print("║  4. Esegui Python batch processor:                            ║");
+    Print("║     python hmm_backtest_processor.py [file.csv]               ║");
     Print("╚═══════════════════════════════════════════════════════════════╝");
 
-    // Apri cartella Explorer
+    // Path completo per l'utente
     string terminal_path = TerminalInfoString(TERMINAL_DATA_PATH);
     string full_path = terminal_path + "\\MQL5\\Files\\" + folder_path;
 
-    Print("\nCartella output: ", full_path);
-    Print("Premi OK per aprire la cartella");
-
-    #ifdef __MQL5__
-    if(MessageBox("Export completato!\nVuoi aprire la cartella?",
-                  "Export Dati Storici", MB_YESNO|MB_ICONINFORMATION) == IDYES)
-    {
-        ShellExecuteW(0, "open", full_path, "", "", 1);
-    }
-    #endif
+    Print("\n");
+    Print("╔═══════════════════════════════════════════════════════════════╗");
+    Print("║  PERCORSO COMPLETO FILE:                                      ║");
+    Print("╚═══════════════════════════════════════════════════════════════╝");
+    Print(full_path + "\\" + ExportFileName);
+    Print("\nCopia questo path per usarlo con Python!");
 }
 
 //+------------------------------------------------------------------+
