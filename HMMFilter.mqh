@@ -179,7 +179,8 @@ public:
 
         // Leggi prima linea (regime code: 1, 2, or 3)
         string line = FileReadString(fileHandle);
-        line = StringTrimRight(StringTrimLeft(line));  // Rimuovi spazi
+        StringTrimLeft(line);   // Rimuovi spazi a sinistra
+        StringTrimRight(line);  // Rimuovi spazi a destra
 
         int regime = (int)StringToInteger(line);
 
